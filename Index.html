@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0b1a">
+<title>CineVibe — Что посмотреть</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22CineVibe%22,%22short_name%22:%22CineVibe%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230b0b1a%22,%22theme_color%22:%22%230b0b1a%22}">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#0b0b1a;font-family:'DM Sans',system-ui,sans-serif;color:#fff}
+::-webkit-scrollbar{display:none}
+@keyframes detailIn{from{transform:translateY(40%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes cardPop{from{opacity:0;transform:scale(.85) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes spinBtn{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.9)}100%{transform:rotate(360deg) scale(1)}}
+@keyframes pulse{0%,100%{box-shadow:0 12px 40px rgba(229,62,62,.4),0 0 60px rgba(229,62,62,.15)}50%{box-shadow:0 12px 50px rgba(229,62,62,.55),0 0 80px rgba(229,62,62,.25)}}
+
+#app{max-width:480px;margin:0 auto;height:100vh;position:relative;overflow:hidden}
+#content{height:100%;overflow-y:auto;padding-bottom:80px}
+
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  background:rgba(11,11,26,.94);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-around;padding:8px 0 20px;z-index:50}
+.nav-btn{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:#333;transition:color .2s;padding:4px 16px;position:relative}
+.nav-btn.active{color:#E53E3E}
+.nav-btn.active::before{content:'';position:absolute;top:-8px;width:20px;height:3px;border-radius:2px;background:#E53E3E}
+.nav-btn span{font-size:10px;font-weight:700;letter-spacing:.3px}
+
+.admin-gear{position:fixed;top:16px;right:16px;z-index:50;background:rgba(255,255,255,.06);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:none;border-radius:14px;
+  width:42px;height:42px;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* Carousel */
+.carousel{position:relative;height:470px;width:100%;perspective:1200px;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none}
+.carousel-card{position:absolute;left:50%;top:10px;width:260px;height:400px;margin-left:-130px;
+  border-radius:22px;overflow:hidden;transition:all .5s cubic-bezier(.25,.46,.45,.94);transform-style:preserve-3d}
+.carousel-card img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none}
+.card-gradient{position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,.95))}
+.badge-star{position:absolute;top:14px;left:14px;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);
+  border-radius:10px;padding:5px 10px;display:flex;align-items:center;gap:5px}
+.badge-star span{color:#FBBF24;font-size:14px;font-weight:800}
+.badge-imdb{position:absolute;top:14px;right:14px;background:linear-gradient(135deg,#E53E3E,#B91C1C);
+  border-radius:10px;padding:5px 10px}
+.badge-imdb span{color:#fff;font-size:11px;font-weight:800;letter-spacing:.5px}
+.card-title{position:absolute;bottom:0;left:0;right:0;padding:16px 16px 18px}
+.card-title h3{font-size:18px;font-weight:900;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.9);line-height:1.2;margin:0}
+.card-title p{color:rgba(255,255,255,.55);font-size:12px;margin-top:5px;font-weight:500}
+.dots{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:5px;z-index:20}
+.dot{height:6px;border-radius:3px;cursor:pointer;transition:all .3s}
+
+/* HRow */
+.hrow{display:flex;gap:14px;overflow-x:auto;padding:0 20px 8px;scroll-snap-type:x mandatory}
+.hrow-card{min-width:145px;width:145px;scroll-snap-align:start;cursor:pointer}
+.hrow-card .poster{width:145px;height:218px;border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.4);position:relative}
+.hrow-card .poster img{width:100%;height:100%;object-fit:cover;display:block}
+.hrow-card .name{color:#ccc;font-size:12px;font-weight:600;margin-top:8px;line-height:1.3}
+
+/* Overlay */
+.overlay{position:fixed;inset:0;z-index:100;background:#0b0b1a;overflow-y:auto;animation:detailIn .45s cubic-bezier(.22,1,.36,1)}
+.overlay-admin{z-index:200}
+
+/* Genre grid */
+.genre-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 20px 24px}
+.genre-btn{padding:18px 8px;border-radius:16px;border:1px solid rgba(255,255,255,.06);cursor:pointer;
+  background:rgba(255,255,255,.04);color:#fff;font-size:13px;font-weight:700;text-align:center;transition:all .25s}
+.genre-btn.active{background:linear-gradient(135deg,#E53E3E,#991B1B);border-color:transparent;
+  box-shadow:0 6px 20px rgba(229,62,62,.3)}
+.genre-btn .emoji{font-size:26px;margin-bottom:4px}
+
+/* Inputs */
+input[type=text],input[type=search],.cinput{padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);color:#fff;font-size:14px;outline:none;font-family:inherit}
+.btn-red{padding:10px 18px;border-radius:12px;border:none;background:#E53E3E;color:#fff;cursor:pointer;font-weight:800;font-size:16px;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="app">
+  <button class="admin-gear" onclick="showAdmin()">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  </button>
+  <div id="content"></div>
+  <nav class="bottom-nav" id="nav"></nav>
+</div>
+<div id="detail-overlay"></div>
+<div id="admin-overlay"></div>
+
+<script>
+const IMG='https://image.tmdb.org/t/p';
+const STAR_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+const GENRES_MAP={28:"Боевик",12:"Приключения",16:"Мультфильм",35:"Комедия",80:"Криминал",99:"Документальный",18:"Драма",10751:"Семейный",14:"Фэнтези",36:"История",27:"Ужасы",10402:"Музыка",9648:"Детектив",10749:"Мелодрама",878:"Фантастика",53:"Триллер",10752:"Военный"};
+
+const MOVIES={
+trending:[
+{id:1,title:"Дюна: Часть вторая",poster_path:"/8b8R8l88Qje9dn9OE8PY05Nez7Y.jpg",backdrop_path:"/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",vote_average:8.2,release_date:"2024-02-27",overview:"Пол Атрейдес объединяется с фременами и отправляется в военный поход мести против заговорщиков, уничтоживших его семью. Столкнувшись с выбором между любовью всей жизни и судьбой Вселенной, он стремится предотвратить ужасное будущее.",genre_ids:[878,12]},
+{id:2,title:"Оппенгеймер",poster_path:"/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",backdrop_path:"/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg",vote_average:8.1,release_date:"2023-07-19",overview:"История жизни американского физика Роберта Оппенгеймера, который стоял во главе Манхэттенского проекта и создал первую в мире атомную бомбу.",genre_ids:[18,36]},
+{id:3,title:"Интерстеллар",poster_path:"/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",backdrop_path:"/xJHokMbljvjADYdit5fK1DVfjko.jpg",vote_average:8.7,release_date:"2014-11-05",overview:"Когда засуха, пыльные бури и вымирание растений приводят человечество к продовольственному кризису, коллектив исследователей и учёных отправляется через червоточину в поисках нового дома.",genre_ids:[878,12,18]},
+{id:4,title:"Начало",poster_path:"/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",backdrop_path:"/s3TBrRGB1iav7gFOCNx3H31MoES.jpg",vote_average:8.4,release_date:"2010-07-15",overview:"Кобб — опытный вор в опасном искусстве извлечения — кражи ценных секретов из глубин подсознания во время сна.",genre_ids:[28,878,12]},
+{id:5,title:"Бойцовский клуб",poster_path:"/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",backdrop_path:"/hZkgoQYus5dXo3H8T7Uef6DNknx.jpg",vote_average:8.4,release_date:"1999-10-15",overview:"Сотрудник страховой компании страдает от бессонницы и ищет способ изменить свою жизнь. Случайно познакомившись с Тайлером Дёрденом, он основывает подпольный бойцовский клуб.",genre_ids:[18,53]},
+{id:6,title:"Матрица",poster_path:"/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",backdrop_path:"/fNG7i7RqMErkcqhohV2a6cV1Ehy.jpg",vote_average:8.2,release_date:"1999-03-30",overview:"Жизнь Томаса Андерсона разделена на две части: днём он — программист, а ночью — хакер. Однажды всё меняется навсегда.",genre_ids:[28,878]},
+{id:7,title:"Побег из Шоушенка",poster_path:"/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",backdrop_path:"/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg",vote_average:8.7,release_date:"1994-09-23",overview:"Бухгалтер Энди Дюфрейн обвинён в убийстве жены и приговорён к пожизненному сроку в тюрьме Шоушенк.",genre_ids:[18,80]},
+{id:8,title:"Тёмный рыцарь",poster_path:"/qJ2tW6WMUDux911BTUgMe1nFK8a.jpg",backdrop_path:"/nMKdUUepR0i5zn0y1T4CsSB5ez.jpg",vote_average:8.5,release_date:"2008-07-16",overview:"Бэтмен поднимает ставки в войне с криминалом. С помощью Джима Гордона и Харви Дента он стремится очистить Готэм.",genre_ids:[28,80,18]},
+{id:9,title:"Форрест Гамп",poster_path:"/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg",backdrop_path:"/7c9UVPPiTPltouxRVY6N9uugaVA.jpg",vote_average:8.5,release_date:"1994-06-23",overview:"Сидя на автобусной остановке, Форрест Гамп рассказывает прохожим историю своей необыкновенной жизни.",genre_ids:[18,35,10749]},
+{id:10,title:"Паразиты",poster_path:"/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",backdrop_path:"/TU9Bw21lvmUfjOEBSv9LpEMU3Kq.jpg",vote_average:8.5,release_date:"2019-05-30",overview:"Обычное семейство проникает в дом богатых людей и устраивается на работу. Вскоре обнаруживается, что у богачей есть свои секреты.",genre_ids:[35,53,18]},
+{id:11,title:"Джокер",poster_path:"/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",backdrop_path:"/n6bUvigpRFqSwmPp1m2YMDNINvQ.jpg",vote_average:8.2,release_date:"2019-10-01",overview:"Артур Флек живёт с больной матерью и мечтает стать комиком. Но реальность Готэма жестока к нему.",genre_ids:[80,53,18]},
+{id:12,title:"Властелин колец: Возвращение Короля",poster_path:"/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",backdrop_path:"/pm0RiwNpSja8gR0BTWpxo5a9Bbl.jpg",vote_average:8.5,release_date:"2003-12-01",overview:"Повелитель сил тьмы Саурон направляет свою армию к Минас-Тирит. Несмотря на доблесть, людям не устоять перед этой силой.",genre_ids:[12,14,28]},
+],
+popular:[
+{id:20,title:"Аватар: Путь воды",poster_path:"/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg",backdrop_path:"/s16H6tpK2utvwDtzZ8Qy4qm5Emw.jpg",vote_average:7.6,release_date:"2022-12-14",overview:"Джейк Салли живёт с новой семьёй на Пандоре. Когда знакомая угроза возвращается, он вынужден сражаться.",genre_ids:[878,12,28]},
+{id:21,title:"Человек-паук: Через вселенные",poster_path:"/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",backdrop_path:"/14QbnygCuTO0vl7CAFmPf1fgZfV.jpg",vote_average:8.4,release_date:"2018-12-06",overview:"Майлз Моралес становится Человеком-Пауком и присоединяется к команде из параллельных вселенных.",genre_ids:[16,28,12]},
+{id:22,title:"Всё везде и сразу",poster_path:"/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg",backdrop_path:"/fOy2Jurz9k6RnJnMUMRDAgBZz2N.jpg",vote_average:7.8,release_date:"2022-03-24",overview:"Стареющая китаянка-иммигрантка оказывается втянутой в безумное приключение, в котором она одна может спасти мир.",genre_ids:[28,12,878]},
+{id:23,title:"Достать ножи",poster_path:"/pThyQovXQrw2m0s9x82twj48Jq4.jpg",backdrop_path:"/4HWAQu28e2yaWrtupFPGFkdNU7V.jpg",vote_average:7.9,release_date:"2019-11-27",overview:"Знаменитый автор детективов найден мёртвым в поместье. Расследование ведёт харизматичный детектив.",genre_ids:[35,80,9648]},
+{id:24,title:"1917",poster_path:"/iZf0KyrE25z1sage4SYFLCCrMi9.jpg",backdrop_path:"/tUWivz05fcY14K6RzicRm7IHkUD.jpg",vote_average:8.0,release_date:"2019-12-25",overview:"Двое молодых британских солдат получают невозможное задание — доставить послание, которое спасёт 1600 жизней.",genre_ids:[10752,18,28]},
+{id:25,title:"Гравитация",poster_path:"/kZ2FWDB0zzGMfMGTKLyRyLMMOJh.jpg",backdrop_path:"/sEkvOodJcKR6PfMqVtHXBxJLNlp.jpg",vote_average:7.2,release_date:"2013-09-27",overview:"Доктор Райан Стоун — блестящий инженер, впервые отправившийся в космос. Катастрофа оставляет их в открытом космосе.",genre_ids:[878,53,18]},
+{id:26,title:"Исчезнувшая",poster_path:"/lv5xShBIDPe6b0sRfIIsNOBxr87.jpg",backdrop_path:"/wVKMaOQIyz7DKsLG0yaI56oOgWD.jpg",vote_average:8.0,release_date:"2014-10-01",overview:"В пятую годовщину свадьбы Ник Данн сообщает об исчезновении жены. Под давлением полиции его портрет идеального мужа рушится.",genre_ids:[53,18,9648]},
+{id:27,title:"Одержимость",poster_path:"/7fn624j5lj3xTme2SgiLCeuedmO.jpg",backdrop_path:"/6bbZ6XyvgfjhQwbplnUh1LSj1ky.jpg",vote_average:8.5,release_date:"2014-10-10",overview:"Эндрю мечтает стать великим джазовым барабанщиком. Его наставник Флетчер использует жёсткие методы.",genre_ids:[18,10402]},
+],
+topRated:[
+{id:30,title:"Список Шиндлера",poster_path:"/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",backdrop_path:"/loRmRzQXZC0JO4wvIEI0Si6AQQN.jpg",vote_average:8.6,release_date:"1993-11-30",overview:"Реальная история о немецком бизнесмене Оскаре Шиндлере, спасшем более тысячи евреев от Холокоста.",genre_ids:[18,36,10752]},
+{id:31,title:"Зелёная миля",poster_path:"/velWPhVMQeQKcxggNEU8YmIo52R.jpg",backdrop_path:"/l6hQWH9eeEEfGSQMjBe0OYEIQlu.jpg",vote_average:8.5,release_date:"1999-12-10",overview:"Пол Эджкомб — начальник блока смертников. Однажды к нему попадает заключённый Джон Коффи со сверхъестественным даром.",genre_ids:[14,18,80]},
+{id:32,title:"Король Лев",poster_path:"/sKCr78MXSLixwmZ8DyJLrpMsd15.jpg",backdrop_path:"/wXsQvli6tWqja51pYxXNG1LFIGV.jpg",vote_average:8.3,release_date:"1994-06-23",overview:"Львёнок Симба не может дождаться, когда станет королём. Но его дядя Шрам строит козни.",genre_ids:[16,18,10751]},
+{id:33,title:"Криминальное чтиво",poster_path:"/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",backdrop_path:"/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",vote_average:8.5,release_date:"1994-09-10",overview:"Несколько историй из мира криминала в Лос-Анджелесе переплетаются в единый сюжет.",genre_ids:[53,80]},
+{id:34,title:"Бесславные ублюдки",poster_path:"/7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg",backdrop_path:"/jToEhNFkuczUfGqllPUGfaiAuXM.jpg",vote_average:8.2,release_date:"2009-08-18",overview:"Группа еврейских солдат планирует дерзкое покушение на руководство Третьего рейха.",genre_ids:[18,53,10752]},
+{id:35,title:"Гладиатор",poster_path:"/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",backdrop_path:"/hND16ayVSNbSxFjBVeSjBiFRM7b.jpg",vote_average:8.2,release_date:"2000-05-01",overview:"Генерал Максимус предан императором и продан в рабство. Он становится гладиатором и борется за свободу.",genre_ids:[28,18,12]},
+{id:36,title:"Престиж",poster_path:"/bdN3gXuIZYaJP7ftKK2sU0nPtEA.jpg",backdrop_path:"/c1YIurKblSAFHfnbFtE4g1FjBli.jpg",vote_average:8.2,release_date:"2006-10-19",overview:"Два фокусника ведут непримиримое соперничество, стремясь создать лучшую иллюзию.",genre_ids:[18,53,878]},
+{id:37,title:"Леон",poster_path:"/yI6X2cCM5YPJtxMhUd3dPGqDAhw.jpg",backdrop_path:"/4Bgg5xX5mNghOGUSBjVCLMbhDSn.jpg",vote_average:8.5,release_date:"1994-09-14",overview:"Профессиональный убийца Леон берёт под опеку 12-летнюю Матильду, семья которой была уничтожена полицейским.",genre_ids:[28,80,18]},
+],
+action:[
+{id:40,title:"Безумный Макс: Дорога ярости",poster_path:"/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",backdrop_path:"/nlCHUWjY9XWbuEUQauCBgnY8ymF.jpg",vote_average:7.6,release_date:"2015-05-13",overview:"В постапокалиптической пустыне Макс объединяется с Фуриосой в бегстве от тирана.",genre_ids:[28,12,878]},
+{id:41,title:"Джон Уик",poster_path:"/fZPSd91yGE9fCcCe6OoQr6E3Bev.jpg",backdrop_path:"/umC04Cozevu8nn3JTDJ1pc7PVTn.jpg",vote_average:7.4,release_date:"2014-10-22",overview:"Легендарный наёмный убийца Джон Уик выходит на тропу мести после гибели любимого пса.",genre_ids:[28,53]},
+{id:42,title:"Убить Билла",poster_path:"/v7TKJfE3xAJhRKMBN3agJMASSw5.jpg",backdrop_path:"/hLyfEhLByOnEMMGHIYcBLp98bJE.jpg",vote_average:8.1,release_date:"2003-10-10",overview:"Бывшая наёмная убийца Невеста приходит в себя после покушения и клянётся отомстить.",genre_ids:[28,80]},
+],
+comedy:[
+{id:50,title:"Большой Лебовски",poster_path:"/9mprbw31MGdd3ybJFAFqTPqCJky.jpg",backdrop_path:"/pgVBx9WPdaKVDdMCxNqGWntq3wu.jpg",vote_average:7.8,release_date:"1998-03-06",overview:"Лентяй и любитель боулинга Чувак случайно оказывается втянутым в историю с похищением.",genre_ids:[35,80]},
+{id:51,title:"Маска",poster_path:"/xRLCAMWysBpcxijBsh0biPT9EUa.jpg",backdrop_path:"/5nEEKOMzYhDML5Vnni73dq9Y09Y.jpg",vote_average:6.9,release_date:"1994-07-29",overview:"Банковский клерк находит загадочную маску, которая превращает его в безумного супергероя.",genre_ids:[35,14]},
+],
+horror:[
+{id:60,title:"Сияние",poster_path:"/b6ko0IKC8MdYBBPkkA1aBPLe2yz.jpg",backdrop_path:"/4i3hBMQuCxiidFxDFy5TbPLcKaA.jpg",vote_average:8.2,release_date:"1980-05-23",overview:"Писатель Джек Торренс устраивается смотрителем в отель «Оверлук» на зиму. Изоляция и сверхъестественные силы начинают сводить его с ума.",genre_ids:[27,53]},
+{id:61,title:"Молчание ягнят",poster_path:"/uS9m8OBk1RVfSPsfBJIB2RYEq2i.jpg",backdrop_path:"/mfwq2nMBzArzQ7Y9RKE8SKeeTkg.jpg",vote_average:8.3,release_date:"1991-01-30",overview:"Молодая курсантка ФБР обращается к заключённому каннибалу за помощью в поимке серийного убийцы.",genre_ids:[80,27,53]},
+]};
+
+const ALL_MOVIES=[...MOVIES.trending,...MOVIES.popular,...MOVIES.topRated,...MOVIES.action,...MOVIES.comedy,...MOVIES.horror];
+const GENRE_BTNS=[{id:28,n:"Боевик",e:"💥"},{id:35,n:"Комедия",e:"😂"},{id:18,n:"Драма",e:"🎭"},{id:27,n:"Ужасы",e:"👻"},{id:878,n:"Фантастика",e:"🚀"},{id:10749,n:"Мелодрама",e:"❤️"},{id:53,n:"Триллер",e:"🔪"},{id:16,n:"Мультфильм",e:"🎨"},{id:12,n:"Приключения",e:"🗺️"},{id:14,n:"Фэнтези",e:"🧙"},{id:80,n:"Криминал",e:"🔫"},{id:36,n:"История",e:"📜"},{id:10752,n:"Военный",e:"⚔️"},{id:10751,n:"Семейный",e:"👨‍👩‍👧"}];
+const REVIEWS=[
+{author:"Кинокритик Пётр",rating:9,text:"Потрясающий фильм! Визуальный ряд и сюжет на высоте. Рекомендую!"},
+{author:"Анна М.",rating:8,text:"Очень понравилось! Актёрская игра великолепна, каждая сцена продумана."},
+{author:"MovieFan2024",rating:7,text:"Хороший фильм, но местами затянут. Стоит посмотреть ради операторской работы."},
+{author:"Дмитрий К.",rating:9,text:"Шедевр. Пересматривал три раза и каждый раз нахожу новое. Музыка — космос!"},
+{author:"Светлана",rating:6,text:"Неплохо, но ожидала большего. Визуально красиво, но сюжет предсказуем."},
+];
+
+/* ══════ STATE ══════ */
+let currentTab='home';
+let collections=[];
+let carouselStates={};
+
+function loadCols(){try{const s=localStorage.getItem('cinevibe-cols');if(s)collections=JSON.parse(s);}catch{}}
+function saveCols(){try{localStorage.setItem('cinevibe-cols',JSON.stringify(collections));}catch{}}
+loadCols();
+
+/* ══════ NAV ══════ */
+const TABS=[
+{id:'home',label:'Главная',d:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1'},
+{id:'rec',label:'Подборки',d:'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.518 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.518-4.674z'},
+{id:'genre',label:'Жанры',d:'M4 6h16M4 12h16M4 18h16'},
+{id:'random',label:'Рандом',d:'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5'},
+];
+
+function renderNav(){
+  document.getElementById('nav').innerHTML=TABS.map(t=>`
+    <button class="nav-btn ${currentTab===t.id?'active':''}" onclick="switchTab('${t.id}')">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="${t.d}"/></svg>
+      <span>${t.label}</span>
+    </button>`).join('');
+}
+
+function switchTab(id){currentTab=id;renderNav();renderContent();}
+
+/* ══════ CAROUSEL ══════ */
+function buildCarousel(movies,cid){
+  if(!carouselStates[cid])carouselStates[cid]={idx:0};
+  const st=carouselStates[cid];
+  let h=`<div class="carousel" id="car-${cid}" data-cid="${cid}">`;
+  movies.forEach((m,i)=>{
+    const diff=i-st.idx,absD=Math.abs(diff);
+    if(absD>3)return;
+    const tx=diff*195,tz=absD===0?60:-80*absD,ry=diff*-15;
+    const sc=absD===0?1.05:Math.max(.6,1-absD*.2);
+    const op=absD>2?0:absD===0?1:.55;
+    const zi=10-absD,bl=absD===0?0:absD*2;
+    const poster=m.poster_path?`${IMG}/w500${m.poster_path}`:'';
+    const shadow=absD===0?'0 24px 60px rgba(0,0,0,.9),0 0 50px rgba(229,62,62,.12)':'0 10px 30px rgba(0,0,0,.5)';
+
+    h+=`<div class="carousel-card" onclick="carClick('${cid}',${i},${m.id})"
+      style="transform:translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) scale(${sc});
+      opacity:${op};z-index:${zi};filter:${bl>0?`blur(${bl}px)`:'none'};box-shadow:${shadow}">`;
+    if(poster)h+=`<img src="${poster}" onerror="this.style.display='none'" alt="">`;
+    else h+=`<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center;font-size:40px">🎬</div>`;
+    h+=`<div class="card-gradient"></div>`;
+    if(absD===0){
+      h+=`<div class="badge-star">${STAR_SVG}<span>${m.vote_average.toFixed(1)}</span></div>`;
+      h+=`<div class="badge-imdb"><span>IMDB ${m.vote_average.toFixed(1)}</span></div>`;
+    }
+    h+=`<div class="card-title"><h3>${m.title}</h3>`;
+    if(absD===0&&m.release_date)h+=`<p>${m.release_date.slice(0,4)} • ${(m.genre_ids||[]).slice(0,2).map(g=>GENRES_MAP[g]).filter(Boolean).join(', ')}</p>`;
+    h+=`</div></div>`;
+  });
+  // dots
+  h+=`<div class="dots">`;
+  const cnt=Math.min(movies.length,15);
+  for(let i=0;i<cnt;i++){
+    h+=`<div class="dot" onclick="carGo('${cid}',${i},true)" style="width:${i===st.idx?'22px':'6px'};background:${i===st.idx?'#E53E3E':'rgba(255,255,255,.2)'}"></div>`;
+  }
+  h+=`</div></div>`;
+  return h;
+}
+
+function carClick(cid,i,mid){
+  const st=carouselStates[cid];
+  if(i===st.idx){openDetail(ALL_MOVIES.find(m=>m.id===mid)||MOVIES.trending[0]);}
+  else{carGo(cid,i,true);}
+}
+function carGo(cid,idx,abs){
+  const st=carouselStates[cid];
+  if(abs)st.idx=idx;else st.idx=Math.max(0,Math.min(999,st.idx+idx));
+  renderContent();
+}
+
+// Touch/mouse swipe for carousels
+let touchCid=null,touchX=0;
+document.addEventListener('touchstart',e=>{
+  const car=e.target.closest('.carousel');
+  if(!car)return;touchCid=car.dataset.cid;touchX=e.touches[0].clientX;
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!touchCid)return;
+  const dx=e.changedTouches[0].clientX-touchX;
+  if(Math.abs(dx)>35){const st=carouselStates[touchCid];const movies=getCarouselMovies(touchCid);
+    st.idx=Math.max(0,Math.min(movies.length-1,st.idx+(dx<0?1:-1)));renderContent();}
+  touchCid=null;
+},{passive:true});
+let mouseCid=null,mouseX=0,mouseDown=false;
+document.addEventListener('mousedown',e=>{
+  const car=e.target.closest('.carousel');
+  if(!car)return;mouseCid=car.dataset.cid;mouseX=e.clientX;mouseDown=true;
+});
+document.addEventListener('mouseup',e=>{
+  if(!mouseDown||!mouseCid)return;mouseDown=false;
+  const dx=e.clientX-mouseX;
+  if(Math.abs(dx)>35){const st=carouselStates[mouseCid];const movies=getCarouselMovies(mouseCid);
+    st.idx=Math.max(0,Math.min(movies.length-1,st.idx+(dx<0?1:-1)));renderContent();}
+  mouseCid=null;
+});
+
+function getCarouselMovies(cid){
+  if(cid==='trending')return MOVIES.trending;
+  if(cid==='genre')return ALL_MOVIES.filter(m=>(m.genre_ids||[]).includes(parseInt(cid.split('-')[1]||0)));
+  if(cid.startsWith('genre-'))return ALL_MOVIES.filter(m=>(m.genre_ids||[]).includes(parseInt(cid.split('-')[1])));
+  if(cid.startsWith('col-')){const col=collections.find(c=>c.id===parseInt(cid.split('-')[1]));return col?col.movies:[];}
+  return MOVIES.trending;
+}
+
+/* ══════ HROW ══════ */
+function buildHRow(movies){
+  return `<div class="hrow">${movies.map(m=>`
+    <div class="hrow-card" onclick="openDetail(ALL_MOVIES.find(x=>x.id===${m.id})||${JSON.stringify(m).replace(/"/g,'&quot;')})">
+      <div class="poster">
+        ${m.poster_path?`<img src="${IMG}/w342${m.poster_path}" onerror="this.style.display='none'">`:
+        '<div style="width:100%;height:100%;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:30px">🎬</div>'}
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:28px 10px 10px;background:linear-gradient(transparent,rgba(0,0,0,.9))">
+          <div style="display:flex;align-items:center;gap:4">${STAR_SVG}<span style="color:#FBBF24;font-size:12px;font-weight:700">${m.vote_average.toFixed(1)}</span></div>
+        </div>
+      </div>
+      <div class="name">${m.title}</div>
+    </div>`).join('')}</div>`;
+}
+
+/* ══════ DETAIL ══════ */
+function openDetail(m){
+  if(typeof m==='string')m=JSON.parse(m);
+  const bd=m.backdrop_path?`${IMG}/w1280${m.backdrop_path}`:m.poster_path?`${IMG}/w780${m.poster_path}`:'';
+  const genres=(m.genre_ids||[]).map(id=>GENRES_MAP[id]).filter(Boolean);
+  const revs=[...REVIEWS].sort(()=>Math.random()-.5).slice(0,3);
+  const colors=['0,70%,50%','80,70%,50%','160,70%,50%'];
+
+  let h=`<div class="overlay" id="detail">
+    <div style="position:relative;width:100%;height:500px">
+      ${bd?`<img src="${bd}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display='none'">`:''}
+      <div style="position:absolute;inset:0;background:linear-gradient(transparent 15%,rgba(11,11,26,.55) 55%,#0b0b1a 100%)"></div>
+      <button onclick="closeDetail()" style="position:absolute;top:18px;left:16px;width:44px;height:44px;border-radius:22px;border:none;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div style="position:absolute;top:18px;right:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:44px;height:44px;border-radius:22px;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg></div>
+        <div style="width:44px;height:44px;border-radius:22px;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></div>
+      </div>
+      <div style="position:absolute;bottom:95px;right:20px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border-radius:8px;padding:4px 10px"><span style="color:#fff;font-size:12px;font-weight:800;letter-spacing:1px">HD</span></div>
+    </div>
+    <div style="padding:0 20px 50px;margin-top:-80px;position:relative;z-index:2">
+      <h1 style="font-size:30px;font-weight:900;line-height:1.15;letter-spacing:-.5px;margin-bottom:10px">${m.title}</h1>
+      ${genres.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${genres.map(g=>`<span style="background:rgba(229,62,62,.12);color:#E53E3E;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid rgba(229,62,62,.2)">${g}</span>`).join('')}</div>`:''}
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#FBBF24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span style="color:#FBBF24;font-size:18px;font-weight:800">${m.vote_average.toFixed(1)}</span>
+        </div>
+        ${m.release_date?`<span style="color:#666;font-size:14px">${m.release_date.slice(0,4)}</span>`:''}
+      </div>
+      <p style="color:#aab;font-size:15px;line-height:1.75;margin-bottom:28px">${m.overview||'—'}</p>
+      <div style="display:flex;gap:12px;margin-bottom:36px">
+        <button style="flex:1;padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,#E53E3E,#B91C1C);color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(229,62,62,.35);font-family:inherit">▶ Смотреть</button>
+        <button style="flex:1;padding:15px;border-radius:16px;border:2px solid rgba(255,255,255,.12);background:transparent;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Трейлер</button>
+      </div>
+      <h3 style="font-size:18px;font-weight:800;margin-bottom:16px">Отзывы зрителей</h3>
+      ${revs.map((r,i)=>`
+        <div style="background:rgba(255,255,255,.04);border-radius:18px;padding:18px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="width:36px;height:36px;border-radius:18px;background:linear-gradient(135deg,hsl(${colors[i]}),hsl(${colors[i]}));display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800">${r.author[0]}</div>
+            <div style="flex:1"><div style="font-size:14px;font-weight:700">${r.author}</div>
+              <div style="display:flex;align-items:center;gap:3px;margin-top:2px">
+                ${[...Array(5)].map((_,j)=>`<svg width="11" height="11" viewBox="0 0 24 24" fill="${j<Math.round(r.rating/2)?'#FBBF24':'none'}" stroke="${j<Math.round(r.rating/2)?'#FBBF24':'#555'}" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`).join('')}
+                <span style="color:#FBBF24;font-size:11px;font-weight:700;margin-left:4px">${r.rating}/10</span>
+              </div>
+            </div>
+          </div>
+          <p style="color:#888;font-size:13px;line-height:1.65;margin:0">${r.text}</p>
+        </div>`).join('')}
+    </div>
+  </div>`;
+  document.getElementById('detail-overlay').innerHTML=h;
+}
+function closeDetail(){document.getElementById('detail-overlay').innerHTML='';}
+
+/* ══════ PAGES ══════ */
+function renderContent(){
+  const el=document.getElementById('content');
+  if(currentTab==='home') renderHome(el);
+  else if(currentTab==='rec') renderRec(el);
+  else if(currentTab==='genre') renderGenre(el);
+  else if(currentTab==='random') renderRandom(el);
+  el.scrollTop=0;
+}
+
+function renderHome(el){
+  carouselStates['trending']=carouselStates['trending']||{idx:0};
+  el.innerHTML=`
+    <div style="padding:24px 20px 8px">
+      <div style="font-size:12px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">Что посмотреть</div>
+      <h1 style="font-size:30px;font-weight:900;letter-spacing:-.5px">Тренды недели 🔥</h1>
+    </div>
+    ${buildCarousel(MOVIES.trending,'trending')}
+    <div style="margin-top:8px"><div style="padding:0 20px 12px;font-size:19px;font-weight:800">⭐ Популярные</div>${buildHRow(MOVIES.popular)}</div>
+    <div style="margin-top:24px"><div style="padding:0 20px 12px;font-size:19px;font-weight:800">🏆 Лучшие по рейтингу</div>${buildHRow(MOVIES.topRated)}</div>`;
+}
+
+function renderRec(el){
+  let h=`<div style="padding:24px 20px 20px">
+    <h1 style="font-size:28px;font-weight:900;margin-bottom:6px">Подборки</h1>
+    <p style="color:#444;font-size:14px">Коллекции от администратора</p></div>`;
+  if(!collections.length){
+    h+=`<div style="text-align:center;padding:60px;color:#333"><div style="font-size:50px;margin-bottom:16px">📋</div>
+      <p style="font-size:15px;color:#555">Коллекций пока нет</p><p style="font-size:13px;color:#333;margin-top:6px">Создайте через ⚙️</p></div>`;
+  }else{
+    collections.forEach(c=>{
+      const cid='col-'+c.id;carouselStates[cid]=carouselStates[cid]||{idx:0};
+      h+=`<div style="margin-bottom:8px"><div style="padding:0 20px 12px;font-size:19px;font-weight:800">${c.emoji} ${c.name}</div>`;
+      if(c.movies.length>5) h+=buildCarousel(c.movies,cid);
+      else if(c.movies.length>0) h+=buildHRow(c.movies);
+      else h+=`<p style="padding:0 20px;color:#444;font-size:13px">Пусто — добавьте фильмы через ⚙️</p>`;
+      h+=`</div>`;
+    });
+  }
+  el.innerHTML=h;
+}
+
+let selectedGenre=null;
+function renderGenre(el){
+  let h=`<div style="padding:24px 20px 20px">
+    <h1 style="font-size:28px;font-weight:900;margin-bottom:6px">По жанру</h1>
+    <p style="color:#444;font-size:14px">Выбери настроение</p></div>
+    <div class="genre-grid">${GENRE_BTNS.map(g=>`
+      <button class="genre-btn ${selectedGenre===g.id?'active':''}" onclick="pickGenre(${g.id})">
+        <div class="emoji">${g.e}</div>${g.n}</button>`).join('')}</div>`;
+  if(selectedGenre){
+    const filtered=ALL_MOVIES.filter(m=>(m.genre_ids||[]).includes(selectedGenre));
+    if(filtered.length){
+      const cid='genre-'+selectedGenre;carouselStates[cid]=carouselStates[cid]||{idx:0};
+      h+=buildCarousel(filtered,cid);
+    }
+  }
+  el.innerHTML=h;
+}
+function pickGenre(id){selectedGenre=id;renderContent();}
+
+let randomMovie=null,randomSpin=false;
+function renderRandom(el){
+  let h=`<div style="padding:24px 0 100px;display:flex;flex-direction:column;align-items:center;min-height:80vh">
+    <h1 style="font-size:28px;font-weight:900;margin-bottom:6px">Рандом 🎲</h1>
+    <p style="color:#444;font-size:14px;margin-bottom:40px">Не знаешь что смотреть?</p>
+    <button onclick="rollRandom()" style="width:110px;height:110px;border-radius:55px;border:none;
+      background:linear-gradient(135deg,#E53E3E,#B91C1C);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 12px 40px rgba(229,62,62,.4),0 0 60px rgba(229,62,62,.15);
+      animation:${randomSpin?'spinBtn .8s ease infinite':'pulse 2s ease infinite'}">
+      <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+    </button>
+    <p style="color:#555;font-size:12px;margin-top:14px">Нажми!</p>`;
+  if(randomMovie&&!randomSpin){
+    const m=randomMovie;
+    h+=`<div onclick='openDetail(${JSON.stringify(m).replace(/'/g,"&#39;")})' style="margin-top:32px;width:270px;border-radius:22px;overflow:hidden;cursor:pointer;box-shadow:0 16px 50px rgba(0,0,0,.7);animation:cardPop .5s cubic-bezier(.22,1,.36,1)">
+      ${m.poster_path?`<img src="${IMG}/w500${m.poster_path}" style="width:100%;display:block" onerror="this.style.display='none'">`:''}
+      <div style="padding:14px 16px 18px;background:rgba(255,255,255,.03)">
+        <div style="font-size:17px;font-weight:800;margin-bottom:6px">${m.title}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          ${STAR_SVG}<span style="color:#FBBF24;font-weight:700;font-size:14px">${m.vote_average.toFixed(1)}</span>
+          <span style="color:#555;font-size:13px">${m.release_date?.slice(0,4)||''}</span>
+        </div>
+        <p style="color:#777;font-size:12px;line-height:1.5;margin:0">${(m.overview||'').slice(0,100)}…</p>
+      </div></div>`;
+  }
+  h+=`</div>`;
+  el.innerHTML=h;
+}
+function rollRandom(){
+  randomSpin=true;randomMovie=null;renderContent();
+  setTimeout(()=>{randomMovie=ALL_MOVIES[Math.floor(Math.random()*ALL_MOVIES.length)];randomSpin=false;renderContent();},900);
+}
+
+/* ══════ ADMIN ══════ */
+let adminActive=null,adminQ='';
+function showAdmin(){
+  adminActive=null;adminQ='';renderAdmin();
+}
+function closeAdmin(){document.getElementById('admin-overlay').innerHTML='';}
+function renderAdmin(){
+  let h=`<div class="overlay overlay-admin">
+    <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:#0b0b1a;z-index:10">
+      <h2 style="font-size:20px;font-weight:800;margin:0">⚙️ Админ</h2>
+      <button onclick="closeAdmin()" style="background:rgba(255,255,255,.06);border:none;border-radius:12px;width:38px;height:38px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="padding:20px">
+      <h3 style="color:#888;font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Новая коллекция</h3>
+      <div style="display:flex;gap:8px;margin-bottom:24px">
+        <input type="text" id="adm-emoji" value="🎬" style="width:50px;text-align:center;font-size:20px;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#fff;outline:none">
+        <input type="text" id="adm-name" placeholder="Название…" style="flex:1;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#fff;font-size:14px;outline:none;font-family:inherit">
+        <button onclick="addCol()" class="btn-red">+</button>
+      </div>`;
+
+  collections.forEach(c=>{
+    const isActive=adminActive===c.id;
+    h+=`<div style="background:${isActive?'rgba(229,62,62,.08)':'rgba(255,255,255,.02)'};border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;border:1px solid ${isActive?'rgba(229,62,62,.25)':'rgba(255,255,255,.04)'}" onclick="toggleAdmCol(${c.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:700">${c.emoji} ${c.name} <span style="color:#444;font-weight:400">(${c.movies.length})</span></span>
+        <button onclick="event.stopPropagation();delCol(${c.id})" style="background:none;border:none;color:#E53E3E;cursor:pointer;font-size:16px">🗑️</button>
+      </div>`;
+    if(isActive&&c.movies.length){
+      c.movies.forEach(m=>{
+        h+=`<div style="display:flex;align-items:center;gap:10px;margin-top:8px;background:rgba(255,255,255,.03);border-radius:10px;padding:8px">
+          ${m.poster_path?`<img src="${IMG}/w92${m.poster_path}" style="width:36px;height:54px;border-radius:8px;object-fit:cover">`:''}
+          <span style="color:#bbb;font-size:13px;flex:1">${m.title}</span>
+          <button onclick="event.stopPropagation();rmFromCol(${c.id},${m.id})" style="background:none;border:none;color:#666;cursor:pointer">✕</button>
+        </div>`;
+      });
+    }
+    h+=`</div>`;
+  });
+
+  if(adminActive!==null){
+    const col=collections.find(c=>c.id===adminActive);
+    if(col){
+      h+=`<div style="margin-top:20px">
+        <h3 style="color:#888;font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Добавить в «${col.name}»</h3>
+        <input type="text" id="adm-search" placeholder="Поиск по названию…" oninput="adminSearch(this.value)"
+          value="${adminQ}" style="width:100%;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#fff;font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box;font-family:inherit">`;
+      if(adminQ.trim()){
+        const filtered=ALL_MOVIES.filter(m=>m.title.toLowerCase().includes(adminQ.toLowerCase()));
+        filtered.forEach(m=>{
+          const inC=col.movies.find(x=>x.id===m.id);
+          h+=`<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border-radius:12px;padding:10px;margin-bottom:8px">
+            ${m.poster_path?`<img src="${IMG}/w92${m.poster_path}" style="width:40px;height:60px;border-radius:8px;object-fit:cover">`:''}
+            <div style="flex:1"><div style="font-size:14px;font-weight:600">${m.title}</div><div style="color:#444;font-size:12px">${m.release_date?.slice(0,4)||''}</div></div>
+            <button onclick="addToCol(${m.id})" ${inC?'disabled':''} style="padding:8px 14px;border-radius:10px;border:none;background:${inC?'#222':'#E53E3E'};color:${inC?'#555':'#fff'};cursor:${inC?'default':'pointer'};font-size:12px;font-weight:700;font-family:inherit">${inC?'✓':'+ Добавить'}</button>
+          </div>`;
+        });
+      }
+      h+=`</div>`;
+    }
+  }
+  h+=`</div></div>`;
+  document.getElementById('admin-overlay').innerHTML=h;
+}
+
+function addCol(){
+  const name=document.getElementById('adm-name').value.trim();
+  const emoji=document.getElementById('adm-emoji').value.trim()||'🎬';
+  if(!name)return;
+  collections.push({id:Date.now(),name,emoji,movies:[]});saveCols();
+  adminActive=collections[collections.length-1].id;renderAdmin();
+}
+function delCol(id){collections=collections.filter(c=>c.id!==id);saveCols();if(adminActive===id)adminActive=null;renderAdmin();renderContent();}
+function toggleAdmCol(id){adminActive=adminActive===id?null:id;adminQ='';renderAdmin();}
+function adminSearch(v){adminQ=v;renderAdmin();setTimeout(()=>{const el=document.getElementById('adm-search');if(el){el.focus();el.setSelectionRange(v.length,v.length);}},10);}
+function addToCol(mid){
+  const m=ALL_MOVIES.find(x=>x.id===mid);if(!m||adminActive===null)return;
+  const col=collections.find(c=>c.id===adminActive);if(!col||col.movies.find(x=>x.id===mid))return;
+  col.movies.push(m);saveCols();renderAdmin();renderContent();
+}
+function rmFromCol(cid,mid){
+  const col=collections.find(c=>c.id===cid);if(!col)return;
+  col.movies=col.movies.filter(x=>x.id!==mid);saveCols();renderAdmin();renderContent();
+}
+
+/* ══════ INIT ══════ */
+renderNav();renderContent();
+</script>
+</body>
+</html>
